@@ -2482,7 +2482,7 @@ export const ApprovingPending = ({
                 }}
                 id="customized-dialog-title"
               >
-                Approve Request
+                Approve Requests
               </DialogTitle>
               <IconButton
                 aria-label="close"
@@ -4678,6 +4678,8 @@ export function ApprovingEmployee({ refreshHistoryLogs }) {
     },
   ];
 
+  const directoryPersonnel = defaultPersonnel;
+
   // Load personnel and head of the company from localStorage
   React.useEffect(() => {
     const savedPersonnel = JSON.parse(localStorage.getItem("personnel")) || [];
@@ -4945,15 +4947,21 @@ export function ApprovingEmployee({ refreshHistoryLogs }) {
       }
     }
   };
-
-  const hostname = window.location.hostname;
-
-  const API_BASE_URL =
-    hostname === "localhost" ||
-    hostname.startsWith("192.168.") ||
-    hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Development or LAN
-      : `${window.location.origin}/api`; // Production (same origin)
+  const API_BASE_URL = "https://api.dolexcdo.online/api";
+  const apiBaseUrl = API_BASE_URL.replace(/\/api\/?$/, "");
+  const normalizePosition = (value = "") =>
+    value.replace(/\./g, "").replace(/\s+/g, " ").trim().toUpperCase();
+  const allowedPositions = ["LEO I", "SR LEO", "LEO II", "LEO III"].map((pos) =>
+    normalizePosition(pos)
+  );
+  const buildEmployeePhotoUrl = (photoPath) => {
+    if (!photoPath) return null;
+    const sanitizedPath = photoPath
+      .replace(/^\/+/, "")
+      .replace(/^storage\//i, "")
+      .replace(/^public\//i, "");
+    return `${apiBaseUrl}/storage/${sanitizedPath}`;
+  };
 
   // const handleEdit = (emp) => {
   //   setFirstName(emp.first_name);
@@ -5645,9 +5653,10 @@ export function ApprovingEmployee({ refreshHistoryLogs }) {
                 <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
                   <Box
                     component="img"
-                    src={`${API_BASE_URL.replace("/api", "")}/${
-                      chief.profile_image
-                    }`}
+                    src={`${apiBaseUrl}/${(chief.profile_image || "").replace(
+                      /^\/+/,
+                      ""
+                    )}`}
                     alt={chief.name}
                     sx={{
                       width: 100,
@@ -5686,68 +5695,82 @@ export function ApprovingEmployee({ refreshHistoryLogs }) {
             </Grid>
           ) : (
             // Actual content
-            personnel
+            directoryPersonnel
               .filter((person) =>
-                ["LEO I", "SR LEO", "LEO II", "LEO III"].includes(
-                  person.position_name
+                allowedPositions.includes(
+                  normalizePosition(person.position_name || person.position)
                 )
               )
-              .map((person, index) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-                  <Card
-                    sx={{
-                      position: "relative",
-                      textAlign: "center",
-                      p: 2,
-                      backgroundColor: "#f0f2f5",
-                      borderRadius: "10px",
-                      boxShadow: 2,
-                    }}
-                  >
-                    <Box
-                      component="img"
-                      src={
-                        person.employee_photo
-                          ? `${API_BASE_URL.replace("/api", "")}/storage/${
-                              person.employee_photo
-                            }`
-                          : "https://picsum.photos/120"
-                      }
-                      alt={`${person.first_name} ${person.last_name}`}
-                      sx={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: "10px",
-                        objectFit: "cover",
-                      }}
-                      onError={(e) => {
-                        const fallback = "https://picsum.photos/120";
-                        if (!e.target.src.includes(fallback)) {
-                          e.target.onerror = null;
-                          e.target.src = fallback;
-                        }
-                      }}
-                    />
+              .map((person, index) => {
+                const fallbackImage =
+                  person.image || "https://picsum.photos/120";
+                const photoSrc =
+                  buildEmployeePhotoUrl(person.employee_photo) || fallbackImage;
+                const displayName =
+                  (person.name && person.name.trim()) ||
+                  [person.first_name, person.middle_name, person.last_name]
+                    .filter(Boolean)
+                    .join(" ")
+                    .trim() ||
+                  "Unnamed Employee";
+                const positionLabel =
+                  person.position_name ||
+                  person.position ||
+                  "Position unavailable";
 
-                    <IconButton
-                      sx={{ position: "absolute", top: 8, right: 8 }}
-                      onClick={(event) => handleMenuOpen(event, person)}
+                return (
+                  <Grid
+                    item
+                    xs={12}
+                    sm={6}
+                    md={4}
+                    lg={3}
+                    key={person.id || index}
+                  >
+                    <Card
+                      sx={{
+                        position: "relative",
+                        textAlign: "center",
+                        p: 2,
+                        backgroundColor: "#f0f2f5",
+                        borderRadius: "10px",
+                        boxShadow: 2,
+                      }}
                     >
-                      <MoreHoriz />
-                    </IconButton>
-                    <CardContent>
-                      <Typography fontWeight="bold">
-                        {person.first_name}{" "}
-                        {person.middle_name && person.middle_name + " "}
-                        {person.last_name}
-                      </Typography>
-                      <Typography variant="body2">
-                        {person.position_name}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))
+                      <Box
+                        component="img"
+                        src={photoSrc}
+                        alt={displayName}
+                        sx={{
+                          width: 100,
+                          height: 100,
+                          borderRadius: "10px",
+                          objectFit: "cover",
+                        }}
+                        onError={(e) => {
+                          if (e.target.src !== fallbackImage) {
+                            e.target.onerror = null;
+                            e.target.src = fallbackImage;
+                          }
+                        }}
+                      />
+
+                      {person.id && (
+                        <IconButton
+                          sx={{ position: "absolute", top: 8, right: 8 }}
+                          onClick={(event) => handleMenuOpen(event, person)}
+                        >
+                          <MoreHoriz />
+                        </IconButton>
+                      )}
+                      <CardContent>
+                        <Typography fontWeight="bold">{displayName}</Typography>
+                        <Typography variant="body2">{positionLabel}</Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })
           )}
         </Grid>
 
@@ -5759,8 +5782,8 @@ export function ApprovingEmployee({ refreshHistoryLogs }) {
         >
           <MenuItem
             onClick={() => {
-              handleMenuClose(); // This will close the menu
-              handleEdit(selectedEmployee); // Use your existing edit handler
+              setOpenEdit(true);
+              setMenuAnchor(null);
             }}
           >
             Edit
@@ -5822,14 +5845,7 @@ export function EditEmployee({
   onSave,
 }) {
   const isMobile = useMediaQuery("(max-width:600px)");
-  const hostname = window.location.hostname;
-
-  const API_BASE_URL =
-    hostname === "localhost" ||
-    hostname.startsWith("192.168.") ||
-    hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Development or LAN
-      : `${window.location.origin}/api`; // Production (same origin)
+  const API_BASE_URL = "https://api.dolexcdo.online/api";
 
   // Initialize with employeeData photo if available
   const initialEmployeePhoto = employeeData?.employee_photo || null;
@@ -7240,7 +7256,6 @@ export function ManageHead({ setLoading, refreshHistoryLogs, refetch }) {
   // Static sample data for Head positions
   const [headPositions, setHeadPositions] = useState([]);
   const [isLoading, setIsLoading] = useState(false); // 👈 Add loading state
-  const hostname = window.location.hostname;
   const fileInputRef = useRef(null);
 
   const handleImageClick = () => {
@@ -7258,12 +7273,8 @@ export function ManageHead({ setLoading, refreshHistoryLogs, refetch }) {
       }));
     }
   };
-  const API_BASE_URL =
-    hostname === "localhost" ||
-    hostname.startsWith("192.168.") ||
-    hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Development or LAN
-      : `${window.location.origin}/api`; // Production (same origin)
+  const API_BASE_URL = "https://api.dolexcdo.online/api";
+  const apiBaseUrl = API_BASE_URL.replace(/\/api\/?$/, "");
 
   const [previewImage, setPreviewImage] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -7910,15 +7921,11 @@ export function ManageHead({ setLoading, refreshHistoryLogs, refetch }) {
                         {head.signature ? (
                           <Box
                             component="img"
-                            src={`${API_BASE_URL.replace("/api", "")}/${
-                              head.signature
-                            }`}
+                            src={`${apiBaseUrl}/${head.signature}`}
                             alt="Signature"
                             onClick={() => {
                               setPreviewImage(
-                                `${API_BASE_URL.replace("/api", "")}/${
-                                  head.signature
-                                }`
+                                `${apiBaseUrl}/${head.signature}`
                               );
                               setIsPreviewOpen(true);
                             }}
@@ -8165,13 +8172,9 @@ export function ManageHead({ setLoading, refreshHistoryLogs, refetch }) {
                     src={
                       selectedHead?.profileImageFile
                         ? URL.createObjectURL(selectedHead.profileImageFile)
-                        : `${API_BASE_URL.replace(
-                            "/api",
-                            ""
-                          )}/${selectedHead?.profile_image?.replace(
-                            /^\/+/,
-                            ""
-                          )}`
+                        : `${apiBaseUrl}/${(
+                            selectedHead?.profile_image || ""
+                          ).replace(/^\/+/, "")}`
                     }
                     alt="Profile"
                     onError={(e) => {
@@ -8330,10 +8333,10 @@ export function ManageHead({ setLoading, refreshHistoryLogs, refetch }) {
                     component="img"
                     src={
                       selectedHead?.signature
-                        ? `${API_BASE_URL.replace(
-                            "/api",
+                        ? `${apiBaseUrl}/${selectedHead.signature.replace(
+                            /^\/+/,
                             ""
-                          )}/${selectedHead.signature.replace(/^\/+/, "")}`
+                          )}`
                         : "/images/signatures/esignotfound.jpg"
                     }
                     alt="Current Signature"
@@ -8775,14 +8778,7 @@ export const TOSIGN = ({ data, onClose }) => {
   const [isSignatureLoaded, setIsSignatureLoaded] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  const hostname = window.location.hostname;
-
-  const API_BASE_URL =
-    hostname === "localhost" ||
-    hostname.startsWith("192.168.") ||
-    hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Development or LAN
-      : `${window.location.origin}/api`; // Production (same origin)
+  const API_BASE_URL = "https://api.dolexcdo.online/api";
 
   // Helper to load image as Base64
   const loadImageAsBase64 = (url) => {

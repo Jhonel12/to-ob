@@ -4,14 +4,8 @@ import React, { useRef, useState, useEffect } from "react";
 import { Paper, Button, Box, Typography, Container } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useMediaQuery } from "@mui/material";
-const hostname = window.location.hostname;
-
-const API_BASE_URL =
-  hostname === "localhost" ||
-  hostname.startsWith("192.168.") ||
-  hostname.startsWith("10.")
-    ? `http://${hostname}:8000` // Local or LAN development
-    : `${window.location.origin}`; // Production (same domain)
+const API_BASE_URL = "https://api.dolexcdo.online/api";
+const apiBaseUrl = API_BASE_URL.replace(/\/api\/?$/, "");
 export const OBESIGN = ({ data, onClose }) => {
   const navigate = useNavigate();
   const sigCanvas = useRef(null);
@@ -66,7 +60,7 @@ export const OBESIGN = ({ data, onClose }) => {
       "images/signatures/",
       ""
     );
-    const fullUrl = `${API_BASE_URL}/cors-signature/${signatureFilename}`;
+    const fullUrl = `${apiBaseUrl}/cors-signature/${signatureFilename}`;
 
     loadImageAsBase64(fullUrl)
       .then((dataUrl) => {

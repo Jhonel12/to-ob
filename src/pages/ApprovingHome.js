@@ -44,6 +44,8 @@ import isBetweenPlugin from "dayjs/plugin/isBetween";
 
 // Extend dayjs with the isBetween plugin
 dayjs.extend(isBetweenPlugin);
+const API_BASE_URL = "https://api.dolexcdo.online/api";
+const apiBaseUrl = API_BASE_URL.replace(/\/api\/?$/, "");
 function ApprovingHome() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "pending";
@@ -139,15 +141,6 @@ function ApprovingHome() {
       // console.log("OB API Response:", obResponse);
       // console.log("PS API Response:", psResponse);
 
-      const hostname = window.location.hostname;
-
-      const API_BASE_URL =
-        hostname === "localhost" ||
-        hostname.startsWith("192.168.") ||
-        hostname.startsWith("10.")
-          ? `http://${hostname}:8000` // Local or LAN
-          : window.location.origin; // Production
-
       const signaturePath = headResponse?.data?.signature;
 
       let fullSignatureUrl = null;
@@ -155,7 +148,7 @@ function ApprovingHome() {
       if (signaturePath) {
         // ✅ Normalize path to avoid duplicate slashes
         const normalizedPath = signaturePath.replace(/^\/+/, "");
-        fullSignatureUrl = `${API_BASE_URL}/${normalizedPath}`;
+        fullSignatureUrl = `${apiBaseUrl}/${normalizedPath}`;
 
         setSignatureUrl(fullSignatureUrl);
       } else {
