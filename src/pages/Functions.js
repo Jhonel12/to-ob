@@ -444,13 +444,20 @@ export function WeatherWidget() {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const apiKey = "d6c1fe0f295d4894a0c03549251802";
+        // ✅ Call your Laravel backend proxy
         const city = "Cagayan de Oro";
-        const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${city}`;
+        const url = `https://api.dolexcdo.online/api/weather?city=${encodeURIComponent(
+          city
+        )}`;
 
         const response = await axios.get(url);
 
-        const condition = response.data.current.condition.text;
+        console.log("Weather API response:", response.data);
+
+        // ✅ Safe access
+        const condition =
+          response.data?.current?.condition?.text || "Unavailable";
+
         setWeather(condition);
       } catch (error) {
         console.error(
@@ -462,25 +469,10 @@ export function WeatherWidget() {
     };
 
     fetchWeather();
-    const interval = setInterval(fetchWeather, 60000);
+    const interval = setInterval(fetchWeather, 60000); // refresh every minute
 
     return () => clearInterval(interval);
   }, []);
-
-  return (
-    <Box display="flex" alignItems="center" gap={1} color={"black"}>
-      <SettingsSystemDaydreamOutlined fontSize="small" />{" "}
-      {/* Icon smaller on mobile */}
-      <Typography
-        sx={{
-          fontSize: { xs: "12px", sm: "16px" }, // Smaller font on phones
-          fontWeight: 500,
-        }}
-      >
-        {weather}
-      </Typography>
-    </Box>
-  );
 }
 //02/17/25 | Function Approving Pending--to call into the Tabs in the Approving Home
 
@@ -4953,14 +4945,15 @@ export function ApprovingEmployee({ refreshHistoryLogs }) {
       }
     }
   };
+
   const hostname = window.location.hostname;
 
   const API_BASE_URL =
     hostname === "localhost" ||
     hostname.startsWith("192.168.") ||
     hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Local / LAN (Laravel dev)
-      : "https://api.dolexcdo.online/api"; // Production API
+      ? `http://${hostname}:8000/api` // Development or LAN
+      : `${window.location.origin}/api`; // Production (same origin)
 
   // const handleEdit = (emp) => {
   //   setFirstName(emp.first_name);
@@ -5835,8 +5828,8 @@ export function EditEmployee({
     hostname === "localhost" ||
     hostname.startsWith("192.168.") ||
     hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Local / LAN (Laravel dev)
-      : "https://api.dolexcdo.online/api"; // Production API
+      ? `http://${hostname}:8000/api` // Development or LAN
+      : `${window.location.origin}/api`; // Production (same origin)
 
   // Initialize with employeeData photo if available
   const initialEmployeePhoto = employeeData?.employee_photo || null;
@@ -7269,8 +7262,8 @@ export function ManageHead({ setLoading, refreshHistoryLogs, refetch }) {
     hostname === "localhost" ||
     hostname.startsWith("192.168.") ||
     hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Local / LAN (Laravel dev)
-      : "https://api.dolexcdo.online/api"; // Production API
+      ? `http://${hostname}:8000/api` // Development or LAN
+      : `${window.location.origin}/api`; // Production (same origin)
 
   const [previewImage, setPreviewImage] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -8788,8 +8781,8 @@ export const TOSIGN = ({ data, onClose }) => {
     hostname === "localhost" ||
     hostname.startsWith("192.168.") ||
     hostname.startsWith("10.")
-      ? `http://${hostname}:8000/api` // Local / LAN (Laravel dev)
-      : "https://api.dolexcdo.online/api"; // Production API
+      ? `http://${hostname}:8000/api` // Development or LAN
+      : `${window.location.origin}/api`; // Production (same origin)
 
   // Helper to load image as Base64
   const loadImageAsBase64 = (url) => {
